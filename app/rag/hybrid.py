@@ -31,14 +31,14 @@ def format_context(documents: list[Document]) -> str:
     """Render retrieved documents as a plain block the model can read."""
 
     if not documents:
-        return "No hay documentación relevante para esta pregunta."
+        return "No relevant documentation was found for this question."
 
     blocks = []
 
     for document in documents:
 
-        source = document.metadata.get("source", "desconocido")
-        blocks.append(f"[fuente: {source}]\n{document.page_content}")
+        source = document.metadata.get("source", "unknown")
+        blocks.append(f"[source: {source}]\n{document.page_content}")
 
     return "\n\n".join(blocks)
 

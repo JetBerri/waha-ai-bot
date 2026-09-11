@@ -5,23 +5,28 @@ from langchain_openai import ChatOpenAI
 from app.config import settings
 from app.rag import hybrid, memory
 
-system_template = """Eres el asistente virtual de {business}. Hablas por WhatsApp.
+system_template = """You are the virtual assistant of {business}, talking over WhatsApp.
 
-Reglas:
-- Responde siempre en {language}, de forma natural y cercana, como una persona.
-- Sé breve: dos o tres frases salvo que te pidan detalle. Esto es WhatsApp, no un email.
-- Responde solo con la información del contexto y de la conversación. Si no la tienes,
-  dilo con naturalidad y ofrece poner en contacto con una persona del equipo.
-- No inventes precios, plazos, disponibilidad ni datos de contacto.
-- No uses markdown ni listas con viñetas, WhatsApp no las renderiza bien.
-- Trata al usuario por su nombre si lo conoces por la conversación.
+LANGUAGE: Always reply in the same language the user writes in. Detect it from their
+message and mirror it, including regional variants. Never switch languages on your own,
+never apologise for the language, and never mention this rule. If the language is truly
+unclear, use {fallback_language}.
 
-Documentación disponible:
+Rules:
+- Sound like a person, warm and natural, never like a form letter.
+- Be brief. Two or three sentences unless detail is asked for. This is WhatsApp, not email.
+- Answer only from the context and the conversation below. When you do not know
+  something, say so plainly and offer to put them through to a human on the team.
+- Never invent prices, deadlines, availability, stock or contact details.
+- No markdown, no bullet lists, no headings. WhatsApp renders them badly.
+- Use the person's name if the conversation has revealed it.
+
+Reference documentation:
 <context>
 {context}
 </context>
 
-Lo que recuerdas de conversaciones anteriores con este usuario:
+What you remember from earlier conversations with this contact:
 <memory>
 {recalled}
 </memory>"""
@@ -36,11 +41,16 @@ def get_chat() -> ChatOpenAI:
 
     if chat_model is None:
 
-        chat_model = ChatOpenAI(
-            model=settings.openai_model,
-            temperature=settings.openai_temperature,
-            api_key=settings.openai_api_key,
-        )
+        options = {
+            "model": settings.openai_model,
+            "api_key": settings.openai_api_key,
+        }
+
+        # Only send temperature when configured, newer models can reject it.
+        if settings.openai_temperature is not None:
+            options["temperature"] = settings.openai_temperature
+
+        chat_model = ChatOpenAI(**options)
 
     return chat_model
 
@@ -67,7 +77,7 @@ def format_recalled(documents: list) -> str:
     """Render semantically recalled memories as plain lines."""
 
     if not documents:
-        return "Es la primera vez que hablas con este usuario."
+        return "No earlier conversations with this contact."
 
     return "\n".join(f"- {document.page_content}" for document in documents)
 
@@ -92,7 +102,7 @@ async def answer(chat_id: str, question: str) -> str:
     response = await chain.ainvoke(
         {
             "business": settings.business_name,
-            "language": settings.bot_language,
+            "fallback_language": settings.fallback_language,
             "context": context,
             "recalled": recalled,
             "history": history,

@@ -6,8 +6,8 @@ from app.services.waha import Waha
 
 # Prompt used to turn an image into text the rest of the pipeline can use.
 image_prompt = (
-    "Describe esta imagen en español, de forma breve y factual. "
-    "Si contiene texto, matrículas, precios o documentos, transcríbelos literalmente."
+    "Describe this image briefly and factually, in English. "
+    "Transcribe any text, plate numbers, prices or documents exactly as they appear."
 )
 
 
@@ -94,6 +94,6 @@ async def extract_text(payload: dict, waha: Waha) -> str:
         description = await describe(content, media.get("mimetype", "image/jpeg"))
 
         # Keep the caption, it often carries the real question.
-        return f"{body}\n\n[imagen recibida] {description}".strip()
+        return f"{body}\n\n[image received] {description}".strip()
 
-    return body or "[mensaje no soportado]"
+    return body or "[unsupported message type]"
