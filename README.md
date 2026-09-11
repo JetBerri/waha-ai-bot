@@ -103,15 +103,16 @@ Every variable is documented in `.env.example`. The ones worth tuning:
 | Variable | Default | What it does |
 |---|---|---|
 | `DEBOUNCE_SECONDS` | `6` | Wait before replying, so three quick messages get one answer |
-| `OPENAI_MODEL` | `gpt-4o` | Needs vision support to read images |
-| `OPENAI_TEMPERATURE` | `0.3` | Higher is more creative, lower more repeatable |
+| `OPENAI_MODEL` | `gpt-5.6-terra` | Must accept image input, the bot reads photos |
+| `OPENAI_TEMPERATURE` | unset | Left out on purpose, newer models reject it |
 | `KNOWLEDGE_TOP_K` | `6` | Documents retrieved per question |
 | `MEMORY_TOP_K` | `6` | Older messages recalled for this contact |
 | `MEMORY_RECENT_TURNS` | `10` | Recent messages always replayed |
 | `BUSINESS_NAME` | `Innovacar` | Name the bot introduces itself with |
-| `BOT_LANGUAGE` | `español` | Language it always replies in |
+| `FALLBACK_LANGUAGE` | `Spanish` | Only used when the contact's language is unclear |
 
-The system prompt lives in `app/bot/agent.py`.
+The system prompt lives in `app/bot/agent.py`. It is written in English, but the bot
+always replies in whatever language the contact writes in.
 
 ## Operating
 

@@ -9,7 +9,9 @@ class Settings(BaseSettings):
     # App
     port: int = 8000
     business_name: str = "Innovacar"
-    bot_language: str = "español"
+
+    # Fallback only, the bot mirrors whatever language the user writes in.
+    fallback_language: str = "Spanish"
 
     # Waha, waha_url must be reachable from this process
     waha_url: str = "http://localhost:3000"
@@ -24,10 +26,11 @@ class Settings(BaseSettings):
 
     # OpenAI
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-5.6-terra"
     openai_embedding_model: str = "text-embedding-3-small"
     openai_transcription_model: str = "whisper-1"
-    openai_temperature: float = 0.3
+    # None leaves it unset, some newer models reject the parameter outright.
+    openai_temperature: float | None = None
 
     # Qdrant
     qdrant_url: str = "http://localhost:6333"
