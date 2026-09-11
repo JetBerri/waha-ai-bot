@@ -96,14 +96,23 @@ async def reply_after_debounce(chat_id: str) -> None:
         await reply(chat_id, question)
 
 
+async def show_typing(waha: Waha, chat_id: str, active: bool) -> None:
+    """Toggle the typing indicator, never letting it break the actual reply."""
+
+    try:
+        await (waha.start_typing(chat_id) if active else waha.stop_typing(chat_id))
+    except Exception:
+        logger.warning("typing indicator failed for %s", chat_id)
+
+
 async def reply(chat_id: str, question: str) -> None:
     """Answer one user and store both sides of the exchange in memory."""
 
     waha = Waha()
 
-    try:
-        await waha.start_typing(chat_id)
+    await show_typing(waha, chat_id, True)
 
+    try:
         answer = await agent.answer(chat_id, question)
 
         await memory.remember(chat_id, "user", question)
@@ -115,7 +124,4 @@ async def reply(chat_id: str, question: str) -> None:
         logger.exception("failed to answer %s", chat_id)
 
     finally:
-        try:
-            await waha.stop_typing(chat_id)
-        except Exception:
-            logger.warning("stop_typing failed for %s", chat_id)
+        await show_typing(waha, chat_id, False)
