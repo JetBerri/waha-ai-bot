@@ -1,0 +1,23 @@
+# Secrets
+.env
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Local data
+qdrant_storage/
+.waha_sessions/
+app/rag/data/*
+!app/rag/data/.gitkeep
+
+# Reference repo, kept locally only
+innovacar-whatsapp-bot/
+
+# Scratch
+.bak/
+.DS_Store
