@@ -19,5 +19,6 @@ app/rag/data/*
 innovacar-whatsapp-bot/
 
 # Scratch
+qr.png
 .bak/
 .DS_Store

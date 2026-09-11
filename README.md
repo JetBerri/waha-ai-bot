@@ -1,16 +1,22 @@
 # waha-ai-bot
 
-WhatsApp assistant that answers on its own. It runs on [WAHA](https://waha.devlike.pro),
-understands text, voice notes and images, answers with an LLM grounded in your own
-documents, and keeps a separate memory for every contact.
+Autonomous WhatsApp assistant. Runs on [WAHA](https://waha.devlike.pro), understands
+text, voice notes and images, answers from your own documents, and keeps a separate
+memory for every contact.
+
+- **Hybrid retrieval** over Qdrant: dense embeddings for meaning, sparse BM25 for exact
+  terms like model names, plates or prices.
+- **Per-contact memory**, isolated by chat id and recalled semantically.
+- **Replies in the contact's language**, detected per message.
+- **Debounced**, so three quick messages get one answer instead of three.
 
 ## Requirements
 
-- Docker and Docker Compose
-- An OpenAI API key
-- A phone number with WhatsApp, to link the session once
+Docker, an OpenAI API key, and a phone with WhatsApp.
 
-## Install
+## Quick start
+
+**1. Clone and configure**
 
 ```bash
 git clone git@github.com:JetBerri/waha-ai-bot.git
@@ -18,133 +24,127 @@ cd waha-ai-bot
 cp .env.example .env
 ```
 
-Edit `.env`. The two that matter before the first run:
+Set these three in `.env`:
 
 ```bash
 OPENAI_API_KEY=sk-...
+WAHA_API_KEY=$(openssl rand -hex 32)
 WEBHOOK_SECRET=$(openssl rand -hex 32)
 ```
 
-`WEBHOOK_SECRET` signs the webhook. Leaving it empty makes the bot accept any unsigned
-POST to `/webhook`, so set it before exposing anything.
+`WEBHOOK_SECRET` signs the webhook. An empty value makes the bot accept any unsigned
+POST, so never deploy without it.
 
-If 8000, 3000 or 6333 are already taken on the host, override the host ports. The
-containers keep talking to each other on their internal ports regardless:
-
-```bash
-BOT_PORT=8001
-WAHA_PORT=3001
-QDRANT_PORT=6333
-```
-
-## Run
+**2. Start the stack**
 
 ```bash
 docker compose up -d --build
-docker compose logs -f bot
 ```
 
-Three containers come up: `waha`, `qdrant` and `bot`.
+Three containers come up: `waha`, `qdrant` and `bot`. Check the bot is alive:
 
-## Link WhatsApp
+```bash
+curl http://localhost:8000/health
+```
 
-Only needed once. The session is stored in `./.waha_sessions` and survives restarts.
+**3. Link WhatsApp**
+
+Create the session, then download and scan the QR. Only needed once.
 
 ```bash
 source .env
 
-curl -X POST http://localhost:3000/api/sessions/default/start \
-  -H "X-Api-Key: $WAHA_API_KEY"
+curl -X POST http://localhost:3000/api/sessions \
+  -H "X-Api-Key: $WAHA_API_KEY" -H "Content-Type: application/json" \
+  -d '{"name":"default","start":true}'
 
-open http://localhost:3000/api/default/auth/qr
+curl -s http://localhost:3000/api/default/auth/qr \
+  -H "X-Api-Key: $WAHA_API_KEY" -o qr.png && open qr.png
 ```
 
-Scan the QR from WhatsApp, Settings, Linked devices. The first QR expires in 60 seconds.
+Scan it from WhatsApp, Settings, Linked devices. The first QR lasts 60 seconds; re-run
+the second command to get a fresh one.
 
-Check it worked:
+The QR endpoint requires the `X-Api-Key` header, so opening that URL straight in a
+browser returns 401.
+
+**4. Confirm the session is live**
 
 ```bash
 curl -s http://localhost:3000/api/sessions/default -H "X-Api-Key: $WAHA_API_KEY"
 ```
 
-The status must be `WORKING`. Anything else means the bot cannot send or receive.
+Status must be `WORKING`. Anything else and the bot can neither send nor receive.
 
-## Load the knowledge base
+**5. Load your documents**
 
-The bot only answers from documents you give it.
+The bot only answers from what you give it.
 
 ```bash
 cp your-docs/*.pdf app/rag/data/
 docker compose exec bot python -m app.rag.ingest app/rag/data
 ```
 
-Supported: `.txt`, `.md`, `.pdf`. Re-run after changing the documents.
+Accepts `.txt`, `.md` and `.pdf`. Re-run whenever the documents change.
 
-Changing `OPENAI_EMBEDDING_MODEL` later invalidates the collection. Delete it and ingest
-again:
-
-```bash
-curl -X DELETE http://localhost:6333/collections/knowledge
-```
-
-## Verify
-
-```bash
-curl http://localhost:8000/health   # or $BOT_PORT
-```
-
-Then send a WhatsApp message to the linked number from another phone. Watch `docker
-compose logs -f bot`. A reply should arrive within a few seconds of the debounce window.
+**Done.** Message the linked number from another phone. Follow along with
+`docker compose logs -f bot`.
 
 ## Configuration
 
 Every variable is documented in `.env.example`. The ones worth tuning:
 
-| Variable | Default | What it does |
+| Variable | Default | Purpose |
 |---|---|---|
-| `DEBOUNCE_SECONDS` | `6` | Wait before replying, so three quick messages get one answer |
-| `OPENAI_MODEL` | `gpt-5.6-terra` | Must accept image input, the bot reads photos |
-| `OPENAI_TEMPERATURE` | unset | Left out on purpose, newer models reject it |
+| `DEBOUNCE_SECONDS` | `6` | Wait before replying, so a burst gets one answer |
+| `OPENAI_MODEL` | `gpt-5.6-terra` | Must accept image input |
 | `KNOWLEDGE_TOP_K` | `6` | Documents retrieved per question |
 | `MEMORY_TOP_K` | `6` | Older messages recalled for this contact |
 | `MEMORY_RECENT_TURNS` | `10` | Recent messages always replayed |
-| `BUSINESS_NAME` | empty | Name the bot introduces itself with, generic when unset |
-| `FALLBACK_LANGUAGE` | `Spanish` | Only used when the contact's language is unclear |
+| `BUSINESS_NAME` | empty | Name the bot introduces itself with |
+| `FALLBACK_LANGUAGE` | `Spanish` | Used only when the contact's language is unclear |
+
+`OPENAI_TEMPERATURE` is deliberately unset: `gpt-5.6-terra` rejects it. Only set it for
+models that accept the parameter.
 
 The system prompt lives in `app/bot/agent.py`. It is written in English, but the bot
 always replies in whatever language the contact writes in.
 
+If 8000, 3000 or 6333 are taken on the host, override `BOT_PORT`, `WAHA_PORT` or
+`QDRANT_PORT`. Containers keep talking on their internal ports regardless.
+
 ## Operating
 
 ```bash
-docker compose logs -f bot          # follow the bot
-docker compose restart bot          # reload after changing .env
-docker compose down                 # stop everything, keeps volumes
+docker compose logs -f bot     # follow
+docker compose restart bot     # reload after editing .env
+docker compose down            # stop, volumes survive
 ```
 
-State lives in two directories, both git ignored:
+State lives in two git-ignored directories:
 
-- `.waha_sessions/` the linked WhatsApp session. Delete it and you must scan the QR again.
+- `.waha_sessions/` the linked session. Delete it and you must scan the QR again.
 - `qdrant_storage/` the knowledge base and every conversation memory.
 
-## Running without Docker
+Changing `OPENAI_EMBEDDING_MODEL` invalidates the knowledge collection. Drop it and
+re-ingest:
+
+```bash
+curl -X DELETE http://localhost:6333/collections/knowledge
+```
+
+## Development
 
 ```bash
 python -m venv venv && source venv/bin/activate
-pip install -e .
+pip install -e ".[dev]"
+pytest
 uvicorn main:app --reload --port 8000
 ```
 
-Point `WAHA_URL` and `QDRANT_URL` at `localhost`, and set the hook on the WAHA container
-to `http://host.docker.internal:8000/webhook`, because inside the container `localhost`
-is the container itself.
-
-## Tests
-
-```bash
-pip install -e ".[dev]"
-pytest
-```
+Running outside Docker means pointing `WAHA_URL` and `QDRANT_URL` at `localhost`, and
+setting the WAHA hook to `http://host.docker.internal:8000/webhook`, because inside the
+container `localhost` is the container itself.
 
 ## Layout
 
