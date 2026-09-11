@@ -10,6 +10,9 @@ COPY app ./app
 
 RUN pip install --no-cache-dir .
 
+# Cache the sparse model at build time, otherwise the first reply waits on a download.
+RUN python -c "from fastembed import SparseTextEmbedding; SparseTextEmbedding('Qdrant/bm25')"
+
 COPY main.py ./
 
 EXPOSE 8000
