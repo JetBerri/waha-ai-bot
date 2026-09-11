@@ -8,7 +8,8 @@ class Settings(BaseSettings):
 
     # App
     port: int = 8000
-    business_name: str = "Innovacar"
+    # Left empty on purpose, the prompt stays generic until you set it.
+    business_name: str = ""
 
     # Fallback only, the bot mirrors whatever language the user writes in.
     fallback_language: str = "Spanish"

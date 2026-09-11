@@ -108,7 +108,7 @@ Every variable is documented in `.env.example`. The ones worth tuning:
 | `KNOWLEDGE_TOP_K` | `6` | Documents retrieved per question |
 | `MEMORY_TOP_K` | `6` | Older messages recalled for this contact |
 | `MEMORY_RECENT_TURNS` | `10` | Recent messages always replayed |
-| `BUSINESS_NAME` | `Innovacar` | Name the bot introduces itself with |
+| `BUSINESS_NAME` | empty | Name the bot introduces itself with, generic when unset |
 | `FALLBACK_LANGUAGE` | `Spanish` | Only used when the contact's language is unclear |
 
 The system prompt lives in `app/bot/agent.py`. It is written in English, but the bot

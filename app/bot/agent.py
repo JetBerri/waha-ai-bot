@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 from app.config import settings
 from app.rag import hybrid, memory
 
-system_template = """You are the virtual assistant of {business}, talking over WhatsApp.
+system_template = """You are {identity}, talking over WhatsApp.
 
 LANGUAGE: Always reply in the same language the user writes in. Detect it from their
 message and mirror it, including regional variants. Never switch languages on your own,
@@ -32,6 +32,15 @@ What you remember from earlier conversations with this contact:
 </memory>"""
 
 chat_model: ChatOpenAI | None = None
+
+
+def business_identity() -> str:
+    """Describe who the assistant works for, staying generic when unset."""
+
+    if settings.business_name:
+        return f"the virtual assistant of {settings.business_name}"
+
+    return "a virtual assistant"
 
 
 def get_chat() -> ChatOpenAI:
@@ -101,7 +110,7 @@ async def answer(chat_id: str, question: str) -> str:
 
     response = await chain.ainvoke(
         {
-            "business": settings.business_name,
+            "identity": business_identity(),
             "fallback_language": settings.fallback_language,
             "context": context,
             "recalled": recalled,
