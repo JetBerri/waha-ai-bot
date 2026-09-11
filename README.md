@@ -28,8 +28,14 @@ WEBHOOK_SECRET=$(openssl rand -hex 32)
 `WEBHOOK_SECRET` signs the webhook. Leaving it empty makes the bot accept any unsigned
 POST to `/webhook`, so set it before exposing anything.
 
-If port 8000 or 3000 is already taken on the host, change the left side of the mapping
-in `compose.yml`. Only the host port changes, the containers keep talking on 8000.
+If 8000, 3000 or 6333 are already taken on the host, override the host ports. The
+containers keep talking to each other on their internal ports regardless:
+
+```bash
+BOT_PORT=8001
+WAHA_PORT=3001
+QDRANT_PORT=6333
+```
 
 ## Run
 
@@ -84,7 +90,7 @@ curl -X DELETE http://localhost:6333/collections/knowledge
 ## Verify
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8000/health   # or $BOT_PORT
 ```
 
 Then send a WhatsApp message to the linked number from another phone. Watch `docker

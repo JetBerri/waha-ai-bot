@@ -2,10 +2,9 @@ services:
 
   waha:
     image: devlikeapro/waha:latest
-    container_name: waha
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${WAHA_PORT:-3000}:3000"
     environment:
       WAHA_API_KEY: ${WAHA_API_KEY:-}
       WAHA_DASHBOARD_USERNAME: ${WAHA_DASHBOARD_USERNAME:-waha}
@@ -23,16 +22,14 @@ services:
 
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: qdrant
     restart: unless-stopped
     ports:
-      - "6333:6333"
+      - "${QDRANT_PORT:-6333}:6333"
     volumes:
       - ./qdrant_storage:/qdrant/storage
 
   bot:
     build: .
-    container_name: bot
     restart: unless-stopped
     env_file: .env
     environment:
@@ -40,7 +37,7 @@ services:
       WAHA_URL: http://waha:3000
       QDRANT_URL: http://qdrant:6333
     ports:
-      - "8000:8000"
+      - "${BOT_PORT:-8000}:8000"
     depends_on:
       - waha
       - qdrant
