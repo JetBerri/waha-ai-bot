@@ -36,3 +36,6 @@ packages = ["app"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Without this, running the pytest script instead of python -m pytest cannot import app.
+pythonpath = ["."]
+testpaths = ["test"]
